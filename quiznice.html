@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz de Psicologia Social</title>
+    <style>
+        /* CSS - Estilização */
+        :root {
+            --primary-color: #4a90e2;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text-color);
+        }
+
+        .quiz-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 { margin-bottom: 1rem; color: var(--primary-color); }
+        
+        .loading { font-style: italic; color: #666; }
+
+        .question-section { margin-bottom: 1.5rem; }
+        .question-text { font-size: 1.2rem; font-weight: 600; margin-bottom: 1.5rem; }
+
+        .options-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            text-align: left;
+        }
+
+        .btn:hover:not([disabled]) {
+            background-color: #eef2f5;
+            border-color: var(--primary-color);
+        }
+
+        .btn.correct { background-color: var(--success-color); color: white; border-color: var(--success-color); }
+        .btn.wrong { background-color: var(--error-color); color: white; border-color: var(--error-color); }
+
+        #next-btn {
+            margin-top: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 25px;
+            border: none;
+            font-weight: bold;
+            display: none; /* Escondido inicialmente */
+        }
+
+        .hide { display: none; }
+        
+        .result-box {
+            font-size: 1.2rem;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <h1>Psicologia Social</h1>
+    <div id="loader" class="loading">Carregando banco de questões via JSON...</div>
+    
+    <div id="quiz-box" class="hide">
+        <div class="progress">Questão <span id="current-q">1</span> de 10</div>
+        <div class="question-section">
+            <p id="question-text" class="question-text"></p>
+        </div>
+        <div id="options-container" class="options-grid">
+            </div>
+        <button id="next-btn" class="btn">Próxima Pergunta</button>
+    </div>
+
+    <div id="result-box" class="hide result-box">
+        <h2>Resultado Final</h2>
+        <p id="score-text"></p>
+        <button onclick="location.reload()" class="btn" style="background: var(--primary-color); color: white; text-align: center;">Reiniciar Quiz</button>
+    </div>
+</div>
+
+<script>
+    // JAVASCRIPT
+
+    // 1. Simulação do JSON de Perguntas (Como se viesse de um arquivo .json)
+    const rawJsonData = `[
+        {
+            "id": 1,
+            "question": "Qual é o conceito central da teoria de Leon Festinger que descreve o desconforto mental causado por manter duas crenças contraditórias?",
+            "options": ["A) Atribuição Causal", "B) Dissonância Cognitiva", "C) Influência Social Normativa", "D) Teoria da Identidade Social"],
+            "answer": 1
+        },
+        {
+            "id": 2,
+            "question": "No famoso experimento de Solomon Asch sobre conformidade, o que foi demonstrado principalmente?",
+            "options": ["A) A obediência cega à autoridade", "B) O efeito do espectador em emergências", "C) A influência da pressão do grupo no julgamento individual", "D) A formação de estereótipos raciais"],
+            "answer": 2
+        },
+        {
+            "id": 3,
+            "question": "Qual termo descreve a tendência de superestimar fatores disposicionais (internos) e subestimar fatores situacionais ao explicar o comportamento dos outros?",
+            "options": ["A) Erro Fundamental de Atribuição", "B) Viés de Auto-conveniência", "C) Efeito de Falso Consenso", "D) Profecia Autorrealizável"],
+            "answer": 0
+        },
+        {
+            "id": 4,
+            "question": "A Teoria da Identidade Social, desenvolvida por Henri Tajfel, sugere que o comportamento intergrupal é baseado em:",
+            "options": ["A) Competição realista por recursos limitados", "B) Categorização social, identificação e comparação social", "C) Instintos agressivos inatos", "D) Aprendizagem observacional"],
+            "answer": 1
+        },
+        {
+            "id": 5,
+            "question": "O experimento da Prisão de Stanford, conduzido por Philip Zimbardo, é um exemplo clássico de como:",
+            "options": ["A) A genética determina a criminalidade", "B) Papéis sociais e o ambiente moldam o comportamento", "C) A liderança democrática é mais eficaz", "D) O altruísmo é natural no ser humano"],
+            "answer": 1
+        },
+        {
+            "id": 6,
+            "question": "Qual método de pesquisa em psicologia social envolve a observação do comportamento em seu ambiente natural sem manipulação direta?",
+            "options": ["A) Experimento de Laboratório", "B) Pesquisa de Levantamento (Survey)", "C) Estudo de Caso Clínico", "D) Observação Naturalística"],
+            "answer": 3
+        },
+        {
+            "id": 7,
+            "question": "O 'Efeito do Espectador' (Bystander Effect) sugere que a probabilidade de uma pessoa ajudar em uma emergência:",
+            "options": ["A) Aumenta conforme o número de testemunhas aumenta", "B) Diminui conforme o número de testemunhas aumenta", "C) Permanece igual independentemente do grupo", "D) Depende exclusivamente da personalidade do indivíduo"],
+            "answer": 1
+        },
+        {
+            "id": 8,
+            "question": "Segundo a Teoria do Contato de Allport, qual das opções NÃO é uma condição essencial para reduzir o preconceito entre grupos?",
+            "options": ["A) Status igualitário entre os grupos", "B) Objetivos comuns (cooperação)", "C) Apoio institucional/normativo", "D) Competição intensa por recompensas"],
+            "answer": 3
+        },
+        {
+            "id": 9,
+            "question": "O conceito de 'Pensamento de Grupo' (Groupthink) refere-se a:",
+            "options": ["A) Tomada de decisão criativa em brainstorming", "B) Deterioração da eficiência mental e julgamento moral devido à pressão por consenso no grupo", "C) A soma da inteligência individual de todos os membros", "D) A capacidade de um líder influenciar a multidão"],
+            "answer": 1
+        },
+        {
+            "id": 10,
+            "question": "Na Persuasão, qual rota do Modelo de Probabilidade de Elaboração (ELM) foca em argumentos lógicos e dados factuais?",
+            "options": ["A) Rota Periférica", "B) Rota Central", "C) Rota Emocional", "D) Rota de Conformidade"],
+            "answer": 1
+        }
+    ]`;
+
+    // Variáveis de Estado
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let questionsData = [];
+
+    // Elementos do DOM
+    const loader = document.getElementById('loader');
+    const quizBox = document.getElementById('quiz-box');
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const nextBtn = document.getElementById('next-btn');
+    const currentQSpan = document.getElementById('current-q');
+    const resultBox = document.getElementById('result-box');
+    const scoreText = document.getElementById('score-text');
+
+    // 2. Função Assíncrona para buscar as perguntas (Mock Fetch)
+    async function fetchQuestions() {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                // Parseia o JSON string para objeto JavaScript
+                resolve(JSON.parse(rawJsonData));
+            }, 1500); // Simula 1.5s de delay de rede
+        });
+    }
+
+    // 3. Inicialização com Async/Await
+    async function initQuiz() {
+        try {
+            questionsData = await fetchQuestions();
+            loader.classList.add('hide');
+            quizBox.classList.remove('hide');
+            loadQuestion(currentQuestionIndex);
+        } catch (error) {
+            loader.textContent = "Erro ao carregar perguntas.";
+            console.error(error);
+        }
+    }
+
+    // Função para carregar a pergunta na tela
+    function loadQuestion(index) {
+        const currentData = questionsData[index];
+        questionText.textContent = currentData.question;
+        currentQSpan.textContent = index + 1;
+        optionsContainer.innerHTML = ''; // Limpa opções anteriores
+        nextBtn.style.display = 'none'; // Esconde botão próximo
+
+        // Cria os botões (A, B, C, D)
+        currentData.options.forEach((opt, i) => {
+            const button = document.createElement('button');
+            button.textContent = opt;
+            button.classList.add('btn');
+            button.onclick = () => selectAnswer(i, currentData.answer, button);
+            optionsContainer.appendChild(button);
+        });
+    }
+
+    // Lógica de Seleção de Resposta
+    function selectAnswer(selectedIndex, correctIndex, selectedButton) {
+        // Desabilita todos os botões após a escolha
+        const allButtons = optionsContainer.querySelectorAll('.btn');
+        allButtons.forEach((btn, i) => {
+            btn.disabled = true;
+            // Revela a correta automaticamente se errou
+            if (i === correctIndex) {
+                btn.classList.add('correct');
+            }
+        });
+
+        // Verifica se acertou
+        if (selectedIndex === correctIndex) {
+            score++;
+            // A classe 'correct' já foi adicionada acima
+        } else {
+            selectedButton.classList.add('wrong');
+        }
+
+        // Mostra botão de próxima
+        nextBtn.style.display = 'inline-block';
+    }
+
+    // Evento do botão Próxima
+    nextBtn.addEventListener('click', () => {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < questionsData.length) {
+            loadQuestion(currentQuestionIndex);
+        } else {
+            showResult();
+        }
+    });
+
+    // Mostrar Resultado Final
+    function showResult() {
+        quizBox.classList.add('hide');
+        resultBox.classList.remove('hide');
+        
+        let feedback = "";
+        if(score >= 8) feedback = "Excelente! Você tem um ótimo domínio de Psicologia Social.";
+        else if(score >= 5) feedback = "Bom trabalho! Você conhece os conceitos básicos.";
+        else feedback = "Vale a pena revisar alguns teóricos e conceitos.";
+
+        scoreText.innerHTML = `Você acertou <strong>${score}</strong> de <strong>${questionsData.length}</strong> questões.<br><br>${feedback}`;
+    }
+
+    // Iniciar
+    initQuiz();
+
+</script>
+
+</body>
+</html>
